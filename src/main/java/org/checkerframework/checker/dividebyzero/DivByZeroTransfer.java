@@ -71,29 +71,213 @@ public class DivByZeroTransfer extends CFTransfer {
             Comparison operator,
             AnnotationMirror lhs,
             AnnotationMirror rhs) {
-        // TODO
+        switch(operator) {
+            case EQ:
+                return rhs;
+
+            case NE:
+                if(equal(rhs, zero())) {
+                    return notZero();
+                } else if (equal(rhs, notZero())) {
+                    return zero();
+                } else {
+                    return lhs;
+                }
+
+            case GT:
+            case LT:
+                if(equal(rhs, zero())) {
+                    return notZero();
+                } else {
+                    return lhs;
+                }
+
+            case LE:
+            case GE:
+                // Can't really do better with this
+                // abstract interpretation
+                return lhs;
+        }
+
         return lhs;
     }
 
-    /**
-     * For an arithmetic expression (lhs `op` rhs), compute the point in the
-     * lattice for the result of evaluating the expression. ("Top" is always a
-     * legal return value, but not a very useful one.)
-     *
-     * <p>For example,
-     * <pre>x = 1 + 0</pre>
-     * should cause us to conclude that "x is not zero".
-     *
-     * @param operator   a binary operator
-     * @param lhs        the lattice point for the left-hand side of the expression
-     * @param rhs        the lattice point for the right-hand side of the expression
-     * @return the lattice point for the result of the expression
-     */
+    private AnnotationMirror transferAdd(AnnotationMirror lhs, AnnotationMirror rhs) {
+        if(equal(lhs, zero())) {
+            if(equal(rhs, zero())) {
+                return zero();
+            } else if(equal(rhs, notZero())) {
+                return notZero();
+            } else if (equal(rhs, top())) {
+                return top();
+            } else if (equal(rhs, bottom())) {
+                return bottom();
+            }
+        } else if(equal(lhs, notZero())) {
+            if(equal(rhs, zero())) {
+                return notZero();
+            } else if(equal(rhs, notZero())) {
+                return top();
+            } else if(equal(rhs, top())) {
+                return top();
+            } else if(equal(rhs, bottom())) {
+                return bottom();
+            }
+        } else if(equal(lhs, top())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else {
+                return top();
+            }
+        } else if(equal(lhs, bottom())) {
+            return bottom();
+        }
+
+        // Crash, shouldn't hit this
+        assert false;
+        return null;
+    }
+
+    private AnnotationMirror transferSub(AnnotationMirror lhs, AnnotationMirror rhs) {
+        // This has the same transfer function
+        return transferAdd(lhs, rhs);
+    }
+
+    private AnnotationMirror transferMul(AnnotationMirror lhs, AnnotationMirror rhs) {
+        if(equal(lhs, zero())) {
+           if(equal(rhs, bottom())) {
+               return bottom();
+           } else {
+               return zero();
+           }
+        } else if(equal(lhs, notZero())) {
+            if(equal(rhs, zero())) {
+                return zero();
+            } else if(equal(rhs, notZero())) {
+                return notZero();
+            } else if(equal(rhs, top())) {
+                return top();
+            } else if(equal(rhs, bottom())) {
+                return bottom();
+            }
+        } else if(equal(lhs, top())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else {
+                return top();
+            }
+        } else if(equal(lhs, bottom())) {
+            return bottom();
+        }
+
+        // Crash, shouldn't hit this
+        assert false;
+        return null;
+    }
+
+    private AnnotationMirror transferDiv(AnnotationMirror lhs, AnnotationMirror rhs) {
+        if(equal(lhs, zero())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else if (equal(rhs, zero())) {
+                return top();
+            } else {
+                return zero();
+            }
+        } else if(equal(lhs, notZero())) {
+            if(equal(rhs, zero())) {
+                return top();
+            } else if(equal(rhs, notZero())) {
+                return notZero();
+            } else if(equal(rhs, top())) {
+                return top();
+            } else if(equal(rhs, bottom())) {
+                return bottom();
+            }
+        } else if(equal(lhs, top())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else {
+                return top();
+            }
+        } else if(equal(lhs, bottom())) {
+            return bottom();
+        }
+
+        // Crash, shouldn't hit this
+        assert false;
+        return null;
+    }
+
+    private AnnotationMirror transferMod(AnnotationMirror lhs, AnnotationMirror rhs) {
+        if(equal(lhs, zero())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else if (equal(rhs, zero())) {
+                return top();
+            } else {
+                return zero();
+            }
+        } else if(equal(lhs, notZero())) {
+            if(equal(rhs, zero())) {
+                return top();
+            } else if(equal(rhs, notZero())) {
+                return top();
+            } else if(equal(rhs, top())) {
+                return top();
+            } else if(equal(rhs, bottom())) {
+                return bottom();
+            }
+        } else if(equal(lhs, top())) {
+            if(equal(rhs, bottom())) {
+                return bottom();
+            } else {
+                return top();
+            }
+        } else if(equal(lhs, bottom())) {
+            return bottom();
+        }
+
+        // Crash, shouldn't hit this
+        assert false;
+        return null;
+    }
+
+        /**
+         * For an arithmetic expression (lhs `op` rhs), compute the point in the
+         * lattice for the result of evaluating the expression. ("Top" is always a
+         * legal return value, but not a very useful one.)
+         *
+         * <p>For example,
+         * <pre>x = 1 + 0</pre>
+         * should cause us to conclude that "x is not zero".
+         *
+         * @param operator   a binary operator
+         * @param lhs        the lattice point for the left-hand side of the expression
+         * @param rhs        the lattice point for the right-hand side of the expression
+         * @return the lattice point for the result of the expression
+         */
     private AnnotationMirror arithmeticTransfer(
             BinaryOperator operator,
             AnnotationMirror lhs,
             AnnotationMirror rhs) {
-        // TODO
+        switch (operator) {
+            case PLUS:
+                return transferAdd(lhs, rhs);
+
+            case MINUS:
+                return transferSub(lhs, rhs);
+
+            case TIMES:
+                return transferMul(lhs, rhs);
+
+            case DIVIDE:
+                return transferDiv(lhs, rhs);
+
+            case MOD:
+                return transferMod(lhs, rhs);
+        }
+
         return top();
     }
 
@@ -108,6 +292,15 @@ public class DivByZeroTransfer extends CFTransfer {
     /** Get the bottom of the lattice */
     private AnnotationMirror bottom() {
         return analysis.getTypeFactory().getQualifierHierarchy().getBottomAnnotations().iterator().next();
+    }
+
+    /* Get custom lattice points */
+    private AnnotationMirror zero() {
+        return reflect(Zero.class);
+    }
+
+    private AnnotationMirror notZero() {
+        return reflect(NotZero.class);
     }
 
     /** Compute the least-upper-bound of two points in the lattice */
